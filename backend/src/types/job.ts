@@ -1,3 +1,4 @@
+// This interface describes the shape of a background job entity.
 import { JobState } from "./job-state";
 
 export interface Job {
