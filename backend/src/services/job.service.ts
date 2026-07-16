@@ -2,7 +2,8 @@
 import { jobs } from "../db/schema";
 import { JobState } from "../types/job-state";
 import { db } from "../db";
-import {  eq, sql } from "drizzle-orm";
+import {  eq, sql, and } from "drizzle-orm";
+import { WorkerStatus } from "../types/worker-status";
 
 export async function createJob(type: string, payload: unknown) {
   // Insert a new job into the database with the queued state.
@@ -75,4 +76,44 @@ export async function failJob(jobId: string, error: Error) {
       stackTrace: error.stack,
     })
     .where(eq(jobs.id, jobId));
+}
+
+
+export async function reclaimJobs(){
+  await db.execute(sql`
+    UPDATE jobs
+    SET
+      state = ${JobState.QUEUED},
+      worker_id = NULL,
+      processing_start_time = NULL
+      WHERE
+      state = ${JobState.IN_FLIGHT}
+      AND
+      worker_id IN(
+      SELECT id
+      FROM workers
+      WHERE status = ${WorkerStatus.DEAD}
+      );
+       `);
+}
+
+
+export async function retryJob(jobId: string){
+  const [job] = await db
+  .update(jobs).set({
+    state: JobState.QUEUED,
+    workerId: null,
+    processingStartTime: null,
+    finishTime: null,
+    stackTrace: null,
+  })
+  .where(
+    and(
+      eq(jobs.id, jobId),
+      eq(jobs.state, JobState.FAILED)
+    )
+  )
+  .returning();
+
+  return job ?? null;
 }

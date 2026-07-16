@@ -6,4 +6,6 @@ export const workers = pgTable("workers", {
   status: text("status").notNull(),
 
   lastHeartbeat: timestamp("last_heartbeat"),
+  createAt: timestamp("created_at")
+  .defaultNow().notNull(),
 });
