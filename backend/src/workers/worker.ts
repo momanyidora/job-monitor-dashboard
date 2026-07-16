@@ -43,9 +43,9 @@ export async function startWorker() {
       // Simulate work before marking the job as done.
       await sleep(3000);
 
-      if (job.type === "generate-report") {
-        throw new Error("Report generation failed.");
-      }
+      // if (job.type === "generate-report") {
+      //   throw new Error("Report generation failed.");
+      // }
 
       await completeJob(job.id);
 

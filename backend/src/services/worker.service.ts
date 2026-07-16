@@ -4,6 +4,7 @@ import { workers } from "../db/schema";
 import { WorkerStatus } from "../types/worker-status";
 import { eq, lt } from "drizzle-orm";
 import { db } from "../db";
+import { broadcast } from "../websocket/broadcaster";
 
 export async function registerWorker(workerId: string) {
   // console.log("Registering worker:", workerId)
@@ -35,18 +36,28 @@ export async function heartbeat(workerId: string){
     lastHeartbeat: new Date(),
     status: WorkerStatus.ALIVE,
   })
-  .where(eq(workers.id, workerId))
+  .where(eq(workers.id, workerId));
 
+  broadcast("worker_heartbeat", {
+    workerId,
+    timestamp: new Date(),
+  });
 }
 
 export async function detectDeadWorkers(){
   const threshold = new Date(
     Date.now() - 30 * 1000
   );
-  await db
+  const deadWorkers = await db
   .update(workers)
   .set({
     status: WorkerStatus.DEAD
   })
   .where(lt(workers.lastHeartbeat, threshold))
+  .returning()
+
+  for (let i = 0; i < deadWorkers.length; i++) {
+    broadcast("worker_dead", deadWorkers[i]);
+  }
+
 }

@@ -1,12 +1,15 @@
 // This service handles the main job lifecycle operations for the queue.
+
 import { jobs } from "../db/schema";
 import { JobState } from "../types/job-state";
-import { db } from "../db";
-import {  eq, sql, and } from "drizzle-orm";
 import { WorkerStatus } from "../types/worker-status";
+import { db } from "../db";
+
+import { eq, sql, and } from "drizzle-orm";
+
+import { broadcast } from "../websocket/broadcaster";
 
 export async function createJob(type: string, payload: unknown) {
-  // Insert a new job into the database with the queued state.
   const [job] = await db
     .insert(jobs)
     .values({
@@ -15,6 +18,9 @@ export async function createJob(type: string, payload: unknown) {
       state: JobState.QUEUED,
     })
     .returning();
+
+  broadcast("job_queued", job);
+
   return job;
 }
 
@@ -41,7 +47,11 @@ export async function claimOldestJob(workerId: string) {
       return null;
     }
 
-    return result.rows[0] as {
+    const job = result.rows[0];
+
+    broadcast("job_claimed", job);
+
+    return job as {
       id: string;
       type: string;
       payload: unknown;
@@ -55,65 +65,75 @@ export async function claimOldestJob(workerId: string) {
   });
 }
 
-// Mark a job as completed once its work finishes.
 export async function completeJob(jobId: string) {
-  await db
+  const [job] = await db
     .update(jobs)
     .set({
       state: JobState.COMPLETED,
       finishTime: new Date(),
     })
-    .where(eq(jobs.id, jobId));
+    .where(eq(jobs.id, jobId))
+    .returning();
+
+  if (job) {
+    broadcast("job_completed", job);
+  }
 }
 
-// Mark a job as failed when processing raises an error.
 export async function failJob(jobId: string, error: Error) {
-  await db
+  const [job] = await db
     .update(jobs)
     .set({
       state: JobState.FAILED,
       finishTime: new Date(),
       stackTrace: error.stack,
     })
-    .where(eq(jobs.id, jobId));
+    .where(eq(jobs.id, jobId))
+    .returning();
+
+  if (job) {
+    broadcast("job_failed", job);
+  }
 }
 
-
-export async function reclaimJobs(){
-  await db.execute(sql`
+export async function reclaimJobs() {
+  const result = await db.execute(sql`
     UPDATE jobs
     SET
       state = ${JobState.QUEUED},
       worker_id = NULL,
       processing_start_time = NULL
-      WHERE
+    WHERE
       state = ${JobState.IN_FLIGHT}
-      AND
-      worker_id IN(
-      SELECT id
-      FROM workers
-      WHERE status = ${WorkerStatus.DEAD}
-      );
-       `);
+      AND worker_id IN (
+        SELECT id
+        FROM workers
+        WHERE status = ${WorkerStatus.DEAD}
+      )
+    RETURNING *;
+  `);
+
+  if (result.rows.length > 0) {
+    broadcast("jobs_reclaimed", result.rows);
+  }
 }
 
-
-export async function retryJob(jobId: string){
+export async function retryJob(jobId: string) {
   const [job] = await db
-  .update(jobs).set({
-    state: JobState.QUEUED,
-    workerId: null,
-    processingStartTime: null,
-    finishTime: null,
-    stackTrace: null,
-  })
-  .where(
-    and(
-      eq(jobs.id, jobId),
-      eq(jobs.state, JobState.FAILED)
-    )
-  )
-  .returning();
+    .update(jobs)
+    .set({
+      state: JobState.QUEUED,
+      workerId: null,
+      processingStartTime: null,
+      finishTime: null,
+      stackTrace: null,
+    })
+    .where(and(eq(jobs.id, jobId), eq(jobs.state, JobState.FAILED)))
+    .returning();
+
+  if (job) {
+    broadcast("job_retried", job);
+  }
 
   return job ?? null;
 }
