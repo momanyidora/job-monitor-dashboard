@@ -2,17 +2,13 @@
 import { claimOldestJob, completeJob, failJob } from "../services/job.service";
 import { getWorkerId } from "../services/worker.service";
 import { registerWorker } from "../services/worker.service";
-import { heartbeat, detectDeadWorkers} from "../services/worker.service";
-
-
+import { heartbeat, detectDeadWorkers } from "../services/worker.service";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
 export async function startWorker() {
-
   const workerId = getWorkerId();
 
   await registerWorker(workerId);
@@ -25,9 +21,6 @@ export async function startWorker() {
     await detectDeadWorkers();
   }, 10_000);
   while (true) {
-
-
-
     // Try to take the oldest queued job for this worker.
     const job = await claimOldestJob(workerId);
 
@@ -40,12 +33,11 @@ export async function startWorker() {
     console.log(`Worker ${workerId} processing ${job.type}`);
 
     try {
-      // Simulate work before marking the job as done.
       await sleep(3000);
 
-      // if (job.type === "generate-report") {
-      //   throw new Error("Report generation failed.");
-      // }
+      if (job.type === "generate-report") {
+        throw new Error("Report generation failed.");
+      }
 
       await completeJob(job.id);
 
@@ -58,5 +50,3 @@ export async function startWorker() {
     }
   }
 }
-
-

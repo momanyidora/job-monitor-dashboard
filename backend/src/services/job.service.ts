@@ -78,6 +78,8 @@ export async function completeJob(jobId: string) {
   if (job) {
     broadcast("job_completed", job);
   }
+
+  return job ?? null;
 }
 
 export async function failJob(jobId: string, error: Error) {
@@ -88,12 +90,13 @@ export async function failJob(jobId: string, error: Error) {
       finishTime: new Date(),
       stackTrace: error.stack,
     })
-    .where(eq(jobs.id, jobId))
+    .where(and(eq(jobs.id, jobId), eq(jobs.state, JobState.IN_FLIGHT)))
     .returning();
 
   if (job) {
     broadcast("job_failed", job);
   }
+  return job ?? null;
 }
 
 export async function reclaimJobs() {
@@ -116,6 +119,8 @@ export async function reclaimJobs() {
   if (result.rows.length > 0) {
     broadcast("jobs_reclaimed", result.rows);
   }
+
+  return result.rows;
 }
 
 export async function retryJob(jobId: string) {
