@@ -64,7 +64,7 @@ describe("Job lifecycle edge cases", () => {
 
     const secondAttempt = await completeJob(job.id);
 
-    expect(secondAttempt).toBeNull;
+    expect(secondAttempt).toBeNull();
   });
   it("does not fail a completed job", async () => {
     const job = await createJob("test-job", { value: 1 });
@@ -74,6 +74,6 @@ describe("Job lifecycle edge cases", () => {
 
     const result = await failJob(job.id, new Error("Too late"));
 
-    expect(result).toBeNull;
+    expect(result).toBeNull();
   });
 });

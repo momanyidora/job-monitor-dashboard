@@ -20,7 +20,10 @@ export async function registerWorker(workerId: string) {
     id: workerId,
     status: WorkerStatus.ALIVE,
     lastHeartbeat: new Date(),
-  });
+  })
+  .onConflictDoNothing({
+    target: workers.id
+  })
   // console.log("Worker registered")
 }
 export function getWorkerId() {

@@ -13,5 +13,6 @@
     "forceConsistentCasingInFileNames": true
   },
 
-  "include": ["src"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/tests", "node_modules", "dist"]
 }

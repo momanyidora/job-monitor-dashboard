@@ -1,7 +1,8 @@
-// // This file is the entry point for starting the background worker process.
-console.log("Worker started")
-
-
 import { startWorker } from "./worker";
 
-startWorker()
+console.log("Worker started");
+
+startWorker().catch((error) => {
+  console.error("Worker crashed:", error);
+  process.exit(1);
+});

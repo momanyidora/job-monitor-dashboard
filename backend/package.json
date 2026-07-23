@@ -10,7 +10,7 @@
     "worker": "tsx src/workers/index.ts",
     "ws": "tsx src/websocket/server.ts",
     "start": "node dist/server.ts",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "test:watch": "vitest",
     "test:build": "npm run build && npm run test",
     "test:coverage": "vitest run --coverage",

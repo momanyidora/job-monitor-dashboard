@@ -2,7 +2,7 @@ import app from "./app";
 import { env } from "./config/env";
 import { detectDeadWorkers } from "./services/worker.service";
 import { reclaimJobs } from "./services/job.service";
-
+import "./websocket/server"
 
 
 app.listen(env.PORT, () => {

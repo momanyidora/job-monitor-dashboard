@@ -72,7 +72,7 @@ export async function completeJob(jobId: string) {
       state: JobState.COMPLETED,
       finishTime: new Date(),
     })
-    .where(eq(jobs.id, jobId))
+    .where(and(eq(jobs.id, jobId), eq(jobs.state, JobState.IN_FLIGHT)))
     .returning();
 
   if (job) {

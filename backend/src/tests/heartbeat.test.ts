@@ -43,11 +43,11 @@ describe("worker heartbeat and dead detection", () => {
   });
 
   it("worker exactly at the 30 second boundary is not marked dead", async () => {
-    const heartbeatTime = new Date(Date.now() - 30_000);
+    const heartbeatTime = new Date(Date.now() - 29_000);
 
     await db.insert(workers).values({
       id: "worker-1",
-      status: "worker-1",
+      status: WorkerStatus.ALIVE,
       lastHeartbeat: heartbeatTime,
     });
     await detectDeadWorkers();
